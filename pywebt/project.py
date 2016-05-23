@@ -28,7 +28,7 @@ def getSomeData(limit):
         timeInfo[begin] = [tmp1] if begin not in timeInfo else append(timeInfo[begin], tmp1)
         timeInfo[end] = [tmp2] if end == '' or end not in timeInfo else append(timeInfo[end], tmp2)
         proj[p['projectManage_oid']] = { 'id': p['projectManage_oid'], 'begin':begin, 'end':end, 'name':p['projectManage_name'] }
-    #get links,    project all information
+    '''get links,    project all information'''
     P = Path()
     task = db.M1OA_taskConn
     oldPid = ''
@@ -37,13 +37,14 @@ def getSomeData(limit):
     for doc in task.find().sort('project_oid', 1):
         if oldPid != doc['project_oid']:
             oldPid = doc['project_oid']
-            Range(paths, links) 
-            if oldPid in proj: proj[oldPid]['unit'] = paths.copy() 
+            if oldPid in proj:  #有些项目找不到记录，在此忽略之
+                if len(paths)!=0: Range(paths, links)
+                proj[oldPid]['unit'] = paths.copy()
             paths.clear()
         path = P.getPath(doc['task_owner'], 4)
         if path == '': continue
         paths[path] = 1 if path not in paths else paths[path] + 1
-    #get time information
+    '''get time information'''
     tm = list(timeInfo)
     tm.sort()
     if tm[0] == '':tm.remove('')
@@ -73,16 +74,12 @@ def getG(lines, _path, limit):
     for line in lines:
         sp = line.split("_")
         if len(sp)<2: continue
-        n1 = _path[sp[0]]
-        n2 = _path[sp[1]]
-        if n1 not in nodes:
-            nodes[n1] = index
-            index += 1
-        if n2 not in nodes:
-            nodes[n2] = index
-            index += 1
+        for i in range(0, 2):
+            if _path[sp[i]] not in nodes:
+                nodes[_path[sp[i]]] = index
+                index += 1
         if lines[line] < limit: continue
-        G.add_edge(nodes[ n1 ], nodes[ n2 ], wight=int(lines[line]))
+        G.add_edge(nodes[ _path[sp[0]] ], nodes[ _path[sp[1]] ], wight=int(lines[line]))
     return { 'G': G, 'nodes': nodes}
 
 def getProjectInfo():
@@ -120,11 +117,20 @@ def getProjectUnit(proj, t1, t2):
     print len(data)
     return { 'proj':data, 'path':P.Path }
 
+def filterUnit(units):
+    pass
+    
+#string to time
 def dateT(_date): return datetime.datetime.strptime(_date, '%Y-%m-%d')
 #later time, 1 later than 2
 def dateL(_date1, _date2): 
     _date2 = _date2 if _date2 != '' else datetime.datetime.now().strftime('%Y-%m-%d')
     return datetime.datetime.strptime(_date1, '%Y-%m-%d') > datetime.datetime.strptime(_date2, '%Y-%m-%d')
+#dete format
+def dateF(_date):
+    if _date == '': return ''
+    sp = _date.encode('utf8').split('-')
+    return '20' + '%02d'% int(sp[0].replace('年', '')) + '-' + '%02d'% int(sp[1].replace('月', '')) + '-' + '%02d'% int(sp[2].replace('日', ''))
 
 def getTimeValue():
     db = client['M1OA_DB']
@@ -170,10 +176,7 @@ def plus(d, i): # like i++,not only return value after plus, but change old valu
     d[0] += i
     return d[0]
 
-def dateF(_date):
-    if _date == '': return ''
-    sp = _date.encode('utf8').split('-')
-    return '20' + '%02d'% int(sp[0].replace('年', '')) + '-' + '%02d'% int(sp[1].replace('月', '')) + '-' + '%02d'% int(sp[2].replace('日', ''))
+
 
 
 def getNetworkG():
@@ -260,6 +263,7 @@ def append(ls, value):
 dt = datetime.datetime.now()
 #print [getNetwork(),getTimeValue()]
 #print getSomeData()
+#getSomeData(1)
 #getProjectUnit(None)
 #getNetworkPart(None, None)
 

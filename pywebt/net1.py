@@ -17,6 +17,7 @@ import project
 reload(sys)
 sys.setdefaultencoding('utf8')
 
+
 #根据网络数据获取网络所有信息
 def getInfoByG(G, nodes, filter):
     lsDegree = G.degree()
@@ -25,22 +26,31 @@ def getInfoByG(G, nodes, filter):
     
     nodeInfo = node_format(nodes, lsDegree, lsBetwns, uint_info())   #节点各项指标信息统计
     
-    if filter:network_filter(G, lsDegree) #为了可视化过滤网络
+    if filter: network_filter(G, lsDegree) #为了可视化过滤网络
     
     network = networkx_json(nodes, G)       #网络数据
     
-    return {'network': network, 'nodes': nodeInfo, 'netInfo': netInfo }
+    lsDegree = { x.encode('utf8') : lsDegree[nodes[x]] if nodes[x] in lsDegree else 0 for x in nodes } #name：degree
+    for l in lsDegree:
+        print l, lsDegree[l]
+    print len(lsDegree)
+    return {'network': network, 'nodes': nodeInfo, 'netInfo': netInfo, 'degree': lsDegree }
+#    return {'network': network, 'nodes': nodeInfo, 'netInfo': netInfo }
 
 def getNetwork():
-    limit = 2
+    limit = 1
     Info = project.getSomeData(limit)
     
     G = Info[0]['G']      #索引
     nodes = Info[0]['nodes']
-    data = getInfoByG(G, nodes, True)
+    data = getInfoByG(G, nodes, False)
     data['timeInfo'] = Info[1]
     data['project'] = Info[2]
     data['path'] = Info[3]
+    _temp = { x : Info[3][x] for x in Info[3] if Info[3][x] in nodes }
+    lsDegree = { x : data['degree'][_temp[x].encode('utf8')] if _temp[x].encode('utf8') in data['degree'] else 0 for x in _temp } #path：degree
+    data['degree'] = lsDegree
+#    for n in nodes: print n#, lsDegree[n]
     return json.dumps(data)
 
 def getNetworkByTime(t1, t2):
@@ -131,8 +141,10 @@ def write_network(G, filename = 'tempNet.edges'):
     for ln in G.edges(): fp.write(str(ln[0]) + ',' + str(ln[1]) + '\n')
     fp.close()
 
-#dt = datetime.datetime.now()
-#getNetwork()
+
+
+#dt = datetime.datetime.now()      
+getNetwork()
 #print datetime.datetime.now()-dt
 #
 #G1 = nx.Graph()
